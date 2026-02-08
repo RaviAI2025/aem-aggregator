@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.aem.aggregator</groupId>
+    <artifactId>aem-aggregator</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>AEM Aggregator - Reactor</name>
+    <description>Aggregator reactor that builds all AEM projects: Marketing, Advise, Lifeportal</description>
+
+    <modules>
+        <module>aem-marketing</module>
+        <module>aem-advise</module>
+        <module>aem-lifeportal</module>
+    </modules>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+    </properties>
+
+    <profiles>
+        <!-- Build only Marketing -->
+        <profile>
+            <id>marketing-only</id>
+            <modules>
+                <module>aem-marketing</module>
+            </modules>
+        </profile>
+        <!-- Build only Advise -->
+        <profile>
+            <id>advise-only</id>
+            <modules>
+                <module>aem-advise</module>
+            </modules>
+        </profile>
+        <!-- Build only Lifeportal -->
+        <profile>
+            <id>lifeportal-only</id>
+            <modules>
+                <module>aem-lifeportal</module>
+            </modules>
+        </profile>
+    </profiles>
+</project>

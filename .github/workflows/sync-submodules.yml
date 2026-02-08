@@ -1,0 +1,107 @@
+name: Sync Submodules
+
+on:
+  # Triggered by source repos via repository_dispatch
+  repository_dispatch:
+    types: [submodule-update]
+
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      module:
+        description: 'Module to sync (leave empty for all)'
+        required: false
+        type: choice
+        options:
+          - all
+          - aem-marketing
+          - aem-advise
+          - aem-lifeportal
+
+  # Scheduled sync every 6 hours as safety net
+  schedule:
+    - cron: '0 */6 * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout aggregator with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "AEM Aggregator Bot"
+          git config user.email "aggregator-bot@users.noreply.github.com"
+
+      - name: Determine which module changed
+        id: detect
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            MODULE="${{ github.event.client_payload.module }}"
+            COMMIT_MSG="${{ github.event.client_payload.commit_message }}"
+            echo "module=$MODULE" >> $GITHUB_OUTPUT
+            echo "commit_msg=$COMMIT_MSG" >> $GITHUB_OUTPUT
+            echo "sync_all=false" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            INPUT="${{ github.event.inputs.module }}"
+            if [ "$INPUT" = "all" ] || [ -z "$INPUT" ]; then
+              echo "sync_all=true" >> $GITHUB_OUTPUT
+            else
+              echo "module=$INPUT" >> $GITHUB_OUTPUT
+              echo "sync_all=false" >> $GITHUB_OUTPUT
+            fi
+            echo "commit_msg=Manual sync" >> $GITHUB_OUTPUT
+          else
+            echo "sync_all=true" >> $GITHUB_OUTPUT
+            echo "commit_msg=Scheduled sync" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Sync specific module
+        if: steps.detect.outputs.sync_all != 'true'
+        run: |
+          MODULE="${{ steps.detect.outputs.module }}"
+          echo "Syncing $MODULE..."
+          cd "$MODULE"
+          git fetch origin
+          git checkout master
+          git pull origin master
+          cd ..
+          git add "$MODULE"
+
+      - name: Sync all modules
+        if: steps.detect.outputs.sync_all == 'true'
+        run: |
+          git submodule update --remote --merge
+          git add aem-marketing aem-advise aem-lifeportal
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --cached --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes to commit"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected:"
+            git diff --cached --name-only
+          fi
+
+      - name: Commit and push
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          MODULE="${{ steps.detect.outputs.module }}"
+          MSG="${{ steps.detect.outputs.commit_msg }}"
+          if [ -n "$MODULE" ]; then
+            git commit -m "sync($MODULE): $MSG"
+          else
+            git commit -m "sync(all): $MSG"
+          fi
+          git push origin master

@@ -1,0 +1,9 @@
+[submodule "aem-marketing"]
+	path = aem-marketing
+	url = https://github.com/RaviAI2025/aem-marketing.git
+[submodule "aem-advise"]
+	path = aem-advise
+	url = https://github.com/RaviAI2025/aem-advise.git
+[submodule "aem-lifeportal"]
+	path = aem-lifeportal
+	url = https://github.com/RaviAI2025/aem-lifeportal.git
